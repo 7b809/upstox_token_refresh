@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Upstox TOTP Dashboard</title>
+<link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <!-- Toast stack -->
+  <div class="toast-container" id="toasts" aria-live="polite"></div>
+
+  <main class="container">
+    <header class="header">
+      <div class="logo">U</div>
+      <div class="header-text">
+        <h1>Upstox TOTP Dashboard</h1>
+        <p class="subtitle">
+          Paste or type your 6-digit TOTP — we'll submit it for you.
+        </p>
+      </div>
+      <div class="badge {{ 'badge-on' if test_flag else 'badge-off' }}">
+        TEST_FLAG: {{ 'ON' if test_flag else 'OFF' }}
+      </div>
+    </header>
+
+    <section class="card">
+      <h2 class="card-title">Authenticator Code</h2>
+      <form id="login-form" autocomplete="off" novalidate>
+        <label class="field-label" for="totp-input">TOTP Code</label>
+        <input
+          id="totp-input"
+          class="totp-input"
+          type="text"
+          inputmode="numeric"
+          autocomplete="one-time-code"
+          maxlength="6"
+          placeholder="● ● ● ● ● ●"
+          required
+        />
+        <p class="input-hint" id="paste-hint">
+          Tip: paste a 6-digit code and it will auto-submit.
+        </p>
+        <button id="submit-btn" class="submit-btn" type="submit">
+          <span class="btn-label">Generate Access Token</span>
+          <span class="spinner" aria-hidden="true"></span>
+        </button>
+        <p class="hint">
+          The token is stored in
+          <code>UPSTOX_APP_V2.app_tokens</code> under
+          <code>_id = "upstox_access_token"</code>.
+        </p>
+      </form>
+    </section>
+
+    <section class="card">
+      <div class="card-header">
+        <h2 class="card-title">Current Token Document</h2>
+        <button class="ghost-btn" id="refresh-btn" type="button">
+          Refresh
+        </button>
+      </div>
+      <dl class="status-grid" id="status-grid">
+        <div class="status-empty">Loading…</div>
+      </dl>
+    </section>
+
+    <footer class="footer">
+      <span>Upstox TOTP Dashboard</span>
+      <span class="dot">•</span>
+      <span id="test-flag-footer">
+        Masking: {{ 'disabled (TEST_FLAG=ON)' if test_flag else 'enabled' }}
+      </span>
+    </footer>
+  </main>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
