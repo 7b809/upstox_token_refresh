@@ -24,11 +24,18 @@ function escapeHtml(str) {
 }
 
 function showToast(type, message, duration = 4500) {
-  const icons = { success: "✅", error: "❌", warning: "⚠️" };
+  // Bootstrap Icons classes (no emoji, no images)
+  const icons = {
+    success: "bi-check-circle-fill",
+    error:   "bi-x-circle-fill",
+    warning: "bi-exclamation-triangle-fill",
+  };
+  const iconClass = icons[type] || "bi-info-circle-fill";
+
   const el = document.createElement("div");
   el.className = `toast toast-${type}`;
   el.innerHTML = `
-    <div class="toast-icon">${icons[type] || "ℹ️"}</div>
+    <div class="toast-icon"><i class="bi ${iconClass}" aria-hidden="true"></i></div>
     <div class="toast-message">${escapeHtml(message)}</div>
     <button class="toast-close" aria-label="Close">×</button>
   `;
@@ -43,7 +50,8 @@ function showToast(type, message, duration = 4500) {
 
 function setPasteHint(text, active = false) {
   if (!pasteHint) return;
-  pasteHint.textContent = text;
+  pasteHint.innerHTML =
+    `<i class="bi bi-clipboard-check" aria-hidden="true"></i> ${escapeHtml(text)}`;
   pasteHint.classList.toggle("active", active);
 }
 
@@ -56,7 +64,10 @@ function renderStatus(payload) {
     return;
   }
   if (!payload.data) {
-    statusGrid.innerHTML = `<div class="status-empty">No token stored yet. Submit a TOTP to create one.</div>`;
+    statusGrid.innerHTML = `<div class="status-empty">
+      <i class="bi bi-inbox" aria-hidden="true"></i>
+      No token stored yet. Submit a TOTP to create one.
+    </div>`;
     return;
   }
 
@@ -97,7 +108,10 @@ async function loadStatus() {
     renderStatus(data);
   } catch (err) {
     console.error(err);
-    statusGrid.innerHTML = `<div class="status-empty">Failed to load status.</div>`;
+    statusGrid.innerHTML = `<div class="status-empty">
+      <i class="bi bi-wifi-off" aria-hidden="true"></i>
+      Failed to load status.
+    </div>`;
   }
 }
 
@@ -153,26 +167,19 @@ input.addEventListener("input", (e) => {
 
 // ---------------------------------------------------------------- paste auto-submit
 input.addEventListener("paste", (event) => {
-  // Read the clipboard text (works for both mouse paste & Ctrl/Cmd+V).
   const clipboard =
     (event.clipboardData || window.clipboardData).getData("text") || "";
   const digits = clipboard.replace(/\D/g, "");
 
   if (digits.length === 6) {
-    // Prevent the default paste (which would insert the raw text including
-    // any spaces/dashes) and put only the 6 digits into the field.
     event.preventDefault();
     input.value = digits;
-
     setPasteHint("Code detected — submitting automatically…", true);
-    // Let the DOM settle (so the user sees the filled value) before firing.
     setTimeout(() => submitTOTP(digits, "paste"), 120);
   } else if (digits.length > 0 && digits.length < 6) {
-    // Partial clipboard content: sanitise and let the user finish typing.
     event.preventDefault();
     input.value = digits.slice(0, 6);
   }
-  // Any other case (empty clipboard, letters only, etc.) -> default behaviour.
 });
 
 // ---------------------------------------------------------------- manual submit

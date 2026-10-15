@@ -4,6 +4,11 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Upstox TOTP Dashboard</title>
+
+<!-- Bootstrap Icons (CDN, no local files) -->
+<link rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.2/font/bootstrap-icons.min.css">
+
 <link rel="stylesheet" href="/static/style.css" />
 </head>
 <body>
@@ -12,7 +17,7 @@
 
   <main class="container">
     <header class="header">
-      <div class="logo">U</div>
+      <div class="logo"><i class="bi bi-shield-lock" aria-hidden="true"></i></div>
       <div class="header-text">
         <h1>Upstox TOTP Dashboard</h1>
         <p class="subtitle">
@@ -20,12 +25,13 @@
         </p>
       </div>
       <div class="badge {{ 'badge-on' if test_flag else 'badge-off' }}">
+        <i class="bi bi-toggle-on" aria-hidden="true"></i>
         TEST_FLAG: {{ 'ON' if test_flag else 'OFF' }}
       </div>
     </header>
 
     <section class="card">
-      <h2 class="card-title">Authenticator Code</h2>
+      <h2 class="card-title"><i class="bi bi-key" aria-hidden="true"></i> Authenticator Code</h2>
       <form id="login-form" autocomplete="off" novalidate>
         <label class="field-label" for="totp-input">TOTP Code</label>
         <input
@@ -39,13 +45,18 @@
           required
         />
         <p class="input-hint" id="paste-hint">
+          <i class="bi bi-clipboard-check" aria-hidden="true"></i>
           Tip: paste a 6-digit code and it will auto-submit.
         </p>
         <button id="submit-btn" class="submit-btn" type="submit">
-          <span class="btn-label">Generate Access Token</span>
+          <span class="btn-label">
+            <i class="bi bi-box-arrow-in-right" aria-hidden="true"></i>
+            Generate Access Token
+          </span>
           <span class="spinner" aria-hidden="true"></span>
         </button>
         <p class="hint">
+          <i class="bi bi-database" aria-hidden="true"></i>
           The token is stored in
           <code>UPSTOX_APP_V2.app_tokens</code> under
           <code>_id = "upstox_access_token"</code>.
@@ -55,9 +66,9 @@
 
     <section class="card">
       <div class="card-header">
-        <h2 class="card-title">Current Token Document</h2>
+        <h2 class="card-title"><i class="bi bi-file-earmark-code" aria-hidden="true"></i> Current Token Document</h2>
         <button class="ghost-btn" id="refresh-btn" type="button">
-          Refresh
+          <i class="bi bi-arrow-clockwise" aria-hidden="true"></i> Refresh
         </button>
       </div>
       <dl class="status-grid" id="status-grid">
@@ -66,7 +77,7 @@
     </section>
 
     <footer class="footer">
-      <span>Upstox TOTP Dashboard</span>
+      <span><i class="bi bi-shield-check" aria-hidden="true"></i> Upstox TOTP Dashboard</span>
       <span class="dot">•</span>
       <span id="test-flag-footer">
         Masking: {{ 'disabled (TEST_FLAG=ON)' if test_flag else 'enabled' }}

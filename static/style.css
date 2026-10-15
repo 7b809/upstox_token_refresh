@@ -393,3 +393,27 @@ html, body {
   .totp-input { font-size: 22px; letter-spacing: 0.35em; }
   .toast-container { width: calc(100vw - 32px); right: 16px; top: 16px; }
 }
+
+/* ------------------------------------------------- Bootstrap Icons */
+.bi {
+  display: inline-block;
+  vertical-align: -0.125em;   /* aligns icon with text baseline */
+  line-height: 1;
+}
+
+/* Toast icon colour matches the toast type */
+.toast-success .toast-icon .bi { color: var(--success); }
+.toast-error   .toast-icon .bi { color: var(--error);   }
+.toast-warning .toast-icon .bi { color: var(--warning); }
+
+/* Logo icon sizing */
+.logo .bi { font-size: 22px; }
+
+/* Badge icon spacing */
+.badge .bi { margin-right: 4px; }
+
+/* Submit button icon spacing */
+.submit-btn .btn-label .bi { margin-right: 6px; }
+
+/* Card title icon spacing */
+.card-title .bi { margin-right: 6px; color: var(--muted); }
