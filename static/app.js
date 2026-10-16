@@ -1,5 +1,10 @@
 "use strict";
 
+// =====================================================================
+// Upstox TOTP Dashboard — front-end controller
+// Version: 3 (paste button hardened)
+// =====================================================================
+
 // ---------------------------------------------------------------- elements
 const form       = document.getElementById("login-form");
 const input      = document.getElementById("totp-input");
@@ -10,6 +15,11 @@ const statusGrid = document.getElementById("status-grid");
 const refreshBtn = document.getElementById("refresh-btn");
 const pasteHint  = document.getElementById("paste-hint");
 const installBtn = document.getElementById("install-btn");
+
+// ---------------------------------------------------------------- sanity log
+// If you see this line in DevTools console, app.js loaded correctly.
+console.log("[app.js] loaded. Elements found:",
+  { form: !!form, input: !!input, btn: !!btn, pasteBtn: !!pasteBtn });
 
 // ---------------------------------------------------------------- state
 let submitting = false; // guards against double submits (paste + manual)
@@ -26,7 +36,6 @@ function escapeHtml(str) {
 }
 
 function showToast(type, message, duration = 4500) {
-  // Bootstrap Icons classes (no emoji, no images)
   const icons = {
     success: "bi-check-circle-fill",
     error:   "bi-x-circle-fill",
@@ -167,65 +176,120 @@ async function submitTOTP(totp, origin = "manual") {
   }
 }
 
+// ---------------------------------------------------------------- clipboard
+// Read text from the clipboard, preferring the modern async Clipboard API.
+// Returns { ok: true, text } or { ok: false, reason }.
+async function readClipboardText() {
+  // 1) Modern async Clipboard API (Chrome / Edge / Safari 13.1+ / FF 125+)
+  if (navigator.clipboard && typeof navigator.clipboard.readText === "function") {
+    try {
+      // Optional permission pre-check (not all browsers support this name)
+      if (navigator.permissions && navigator.permissions.query) {
+        try {
+          const status = await navigator.permissions.query({
+            name: "clipboard-read",
+          });
+          console.log("[paste] clipboard-read permission:", status.state);
+        } catch (_) {
+          // Firefox / Safari throw on 'clipboard-read' — ignore.
+        }
+      }
+
+      const text = await navigator.clipboard.readText();
+      console.log("[paste] readText() returned:", JSON.stringify(text));
+      return { ok: true, text: text || "" };
+    } catch (err) {
+      console.warn("[paste] readText() failed:", err && err.name, err && err.message);
+      return {
+        ok: false,
+        reason:
+          err && err.name === "NotAllowedError"
+            ? "Clipboard permission was denied. Allow it in the address-bar prompt, or paste with Ctrl+V."
+            : "Could not read the clipboard. Paste manually with Ctrl+V.",
+      };
+    }
+  }
+
+  // 2) No async API available (http://, old browser, iframe sandbox)
+  return {
+    ok: false,
+    reason:
+      "This browser/context does not expose the Clipboard API. Paste manually with Ctrl+V (or long-press → Paste).",
+  };
+}
+
 // ---------------------------------------------------------------- paste button
-// Reads clipboard → validates 6 digits → fills input → auto-submits.
 async function pasteFromClipboard() {
+  console.log("[paste] button clicked. submitting =", submitting);
   if (submitting) return;
 
-  // 1. Feature-detect the modern Clipboard API
-  if (!navigator.clipboard || !navigator.clipboard.readText) {
-    showToast("error",
-      "Clipboard reading is not supported in this browser. Paste manually with Ctrl+V.");
-    input.focus();
-    return;
+  // Show a loading state so the user sees *something* happen immediately.
+  if (pasteBtn) {
+    pasteBtn.classList.add("loading");
+    pasteBtn.disabled = true;
   }
 
-  let raw = "";
   try {
-    raw = await navigator.clipboard.readText();
+    const result = await readClipboardText();
+
+    if (!result.ok) {
+      showToast("error", result.reason);
+      setPasteHint("Clipboard unavailable — paste with Ctrl+V.", true);
+      input.focus();
+      return;
+    }
+
+    const raw    = result.text;
+    const digits = (raw || "").replace(/\D/g, "");
+    console.log("[paste] digits after sanitise:", JSON.stringify(digits));
+
+    // 3) Validate
+    if (digits.length === 0) {
+      showToast("warning", "Clipboard is empty or contains no digits.");
+      setPasteHint("Clipboard had no digits.", true);
+      input.focus();
+      return;
+    }
+    if (digits.length > 6) {
+      showToast(
+        "warning",
+        `Clipboard contains ${digits.length} digits — expected exactly 6.`
+      );
+      setPasteHint("Clipboard has too many digits.", true);
+      input.focus();
+      return;
+    }
+    if (digits.length < 6) {
+      input.value = digits.slice(0, 6);
+      setPasteHint(`Only ${digits.length} digit(s) found — need 6.`, true);
+      showToast(
+        "warning",
+        `Clipboard had only ${digits.length} digit(s). Please enter the rest.`
+      );
+      input.focus();
+      return;
+    }
+
+    // 4) Perfect: exactly 6 digits
+    input.value = digits;
+    setPasteHint("Code pasted — submitting automatically…", true);
+    console.log("[paste] submitting TOTP:", digits);
+    await submitTOTP(digits, "paste-clipboard");
   } catch (err) {
-    // Most common: user denied the clipboard permission, or the page isn't
-    // focused (Chrome requires a user gesture + focus for clipboard.read).
-    console.error(err);
-    showToast("error",
-      "Could not read the clipboard. Please allow clipboard access or paste with Ctrl+V.");
-    input.focus();
-    return;
+    console.error("[paste] unexpected error:", err);
+    showToast("error", "Unexpected error reading the clipboard.");
+  } finally {
+    if (pasteBtn) {
+      pasteBtn.classList.remove("loading");
+      pasteBtn.disabled = false;
+    }
   }
-
-  // 2. Sanitise: keep only digits, cap at 6
-  const digits = (raw || "").replace(/\D/g, "");
-
-  // 3. Validate length & content
-  if (digits.length === 0) {
-    showToast("warning", "Clipboard is empty or contains no digits.");
-    input.focus();
-    return;
-  }
-  if (digits.length > 6) {
-    showToast("warning",
-      `Clipboard contains ${digits.length} digits — expected exactly 6.`);
-    input.focus();
-    return;
-  }
-  if (digits.length < 6) {
-    // Pre-fill what we got so the user can complete it manually
-    input.value = digits.slice(0, 6);
-    setPasteHint(`Only ${digits.length} digit(s) found — need 6.`, true);
-    showToast("warning",
-      `Clipboard had only ${digits.length} digit(s). Please enter the remaining.`);
-    input.focus();
-    return;
-  }
-
-  // 4. Perfect: 6 digits, all numeric → fill + submit
-  input.value = digits;
-  setPasteHint("Code pasted — submitting automatically…", true);
-  await submitTOTP(digits, "paste-clipboard");
 }
 
 if (pasteBtn) {
   pasteBtn.addEventListener("click", pasteFromClipboard);
+} else {
+  console.warn("[app.js] #paste-btn not found in DOM — paste button will not work.");
 }
 
 // ---------------------------------------------------------------- input sanitise

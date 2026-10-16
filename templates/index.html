@@ -19,7 +19,8 @@
       href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.2/font/bootstrap-icons.min.css"
       crossorigin="anonymous">
 
-<link rel="stylesheet" href="/static/style.css" />
+<!-- Cache-busting query strings: bump the version when you change files -->
+<link rel="stylesheet" href="/static/style.css?v=3" />
 </head>
 <body>
   <!-- Toast stack -->
@@ -108,13 +109,14 @@
     </footer>
   </main>
 
-  <script src="/static/app.js"></script>
+  <!-- Cache-busting query string: bump ?v= when you change app.js -->
+  <script src="/static/app.js?v=3"></script>
 
   <!-- PWA service worker registration -->
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {
-        navigator.serviceWorker.register("/static/sw.js").catch(console.error);
+        navigator.serviceWorker.register("/static/sw.js?v=3").catch(console.error);
       });
     }
   </script>
