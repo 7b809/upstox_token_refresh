@@ -4,6 +4,7 @@
 const form       = document.getElementById("login-form");
 const input      = document.getElementById("totp-input");
 const btn        = document.getElementById("submit-btn");
+const pasteBtn   = document.getElementById("paste-btn");
 const toasts     = document.getElementById("toasts");
 const statusGrid = document.getElementById("status-grid");
 const refreshBtn = document.getElementById("refresh-btn");
@@ -124,6 +125,7 @@ async function submitTOTP(totp, origin = "manual") {
   btn.classList.add("loading");
   btn.disabled = true;
   input.disabled = true;
+  if (pasteBtn) { pasteBtn.classList.add("loading"); pasteBtn.disabled = true; }
 
   try {
     const res = await fetch("/api/login", {
@@ -137,7 +139,10 @@ async function submitTOTP(totp, origin = "manual") {
       if (data.warning) {
         showToast("warning", data.warning);
       } else {
-        const prefix = origin === "paste" ? "Auto-submitted: " : "";
+        const prefix =
+          origin === "paste-clipboard" ? "Pasted & submitted: " :
+          origin === "paste"           ? "Auto-submitted: " :
+                                         "";
         showToast(
           "success",
           prefix + (data.message || "Access token saved successfully.")
@@ -157,8 +162,70 @@ async function submitTOTP(totp, origin = "manual") {
     btn.classList.remove("loading");
     btn.disabled = false;
     input.disabled = false;
+    if (pasteBtn) { pasteBtn.classList.remove("loading"); pasteBtn.disabled = false; }
     input.focus();
   }
+}
+
+// ---------------------------------------------------------------- paste button
+// Reads clipboard → validates 6 digits → fills input → auto-submits.
+async function pasteFromClipboard() {
+  if (submitting) return;
+
+  // 1. Feature-detect the modern Clipboard API
+  if (!navigator.clipboard || !navigator.clipboard.readText) {
+    showToast("error",
+      "Clipboard reading is not supported in this browser. Paste manually with Ctrl+V.");
+    input.focus();
+    return;
+  }
+
+  let raw = "";
+  try {
+    raw = await navigator.clipboard.readText();
+  } catch (err) {
+    // Most common: user denied the clipboard permission, or the page isn't
+    // focused (Chrome requires a user gesture + focus for clipboard.read).
+    console.error(err);
+    showToast("error",
+      "Could not read the clipboard. Please allow clipboard access or paste with Ctrl+V.");
+    input.focus();
+    return;
+  }
+
+  // 2. Sanitise: keep only digits, cap at 6
+  const digits = (raw || "").replace(/\D/g, "");
+
+  // 3. Validate length & content
+  if (digits.length === 0) {
+    showToast("warning", "Clipboard is empty or contains no digits.");
+    input.focus();
+    return;
+  }
+  if (digits.length > 6) {
+    showToast("warning",
+      `Clipboard contains ${digits.length} digits — expected exactly 6.`);
+    input.focus();
+    return;
+  }
+  if (digits.length < 6) {
+    // Pre-fill what we got so the user can complete it manually
+    input.value = digits.slice(0, 6);
+    setPasteHint(`Only ${digits.length} digit(s) found — need 6.`, true);
+    showToast("warning",
+      `Clipboard had only ${digits.length} digit(s). Please enter the remaining.`);
+    input.focus();
+    return;
+  }
+
+  // 4. Perfect: 6 digits, all numeric → fill + submit
+  input.value = digits;
+  setPasteHint("Code pasted — submitting automatically…", true);
+  await submitTOTP(digits, "paste-clipboard");
+}
+
+if (pasteBtn) {
+  pasteBtn.addEventListener("click", pasteFromClipboard);
 }
 
 // ---------------------------------------------------------------- input sanitise
@@ -167,6 +234,7 @@ input.addEventListener("input", (e) => {
 });
 
 // ---------------------------------------------------------------- paste auto-submit
+// (Ctrl+V / right-click paste inside the input — unchanged behaviour)
 input.addEventListener("paste", (event) => {
   const clipboard =
     (event.clipboardData || window.clipboardData).getData("text") || "";
@@ -199,8 +267,6 @@ form.addEventListener("submit", (e) => {
 refreshBtn.addEventListener("click", loadStatus);
 
 // ---------------------------------------------------------------- PWA install
-// Chrome fires `beforeinstallprompt` when the app is installable (manifest +
-// registered service worker + HTTPS). We capture it and show our own button.
 let deferredPrompt = null;
 
 window.addEventListener("beforeinstallprompt", (event) => {
