@@ -8,6 +8,7 @@ const toasts     = document.getElementById("toasts");
 const statusGrid = document.getElementById("status-grid");
 const refreshBtn = document.getElementById("refresh-btn");
 const pasteHint  = document.getElementById("paste-hint");
+const installBtn = document.getElementById("install-btn");
 
 // ---------------------------------------------------------------- state
 let submitting = false; // guards against double submits (paste + manual)
@@ -196,6 +197,38 @@ form.addEventListener("submit", (e) => {
 });
 
 refreshBtn.addEventListener("click", loadStatus);
+
+// ---------------------------------------------------------------- PWA install
+// Chrome fires `beforeinstallprompt` when the app is installable (manifest +
+// registered service worker + HTTPS). We capture it and show our own button.
+let deferredPrompt = null;
+
+window.addEventListener("beforeinstallprompt", (event) => {
+  event.preventDefault();
+  deferredPrompt = event;
+  if (installBtn) installBtn.style.display = "inline-flex";
+});
+
+if (installBtn) {
+  installBtn.addEventListener("click", async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    deferredPrompt = null;
+    installBtn.style.display = "none";
+    if (outcome === "accepted") {
+      showToast("success", "App installed. Launch it from your home screen or app list.");
+    } else {
+      showToast("warning", "Install cancelled.");
+    }
+  });
+}
+
+window.addEventListener("appinstalled", () => {
+  deferredPrompt = null;
+  if (installBtn) installBtn.style.display = "none";
+  showToast("success", "Upstox TOTP Dashboard installed.");
+});
 
 // ---------------------------------------------------------------- bootstrap
 loadStatus();

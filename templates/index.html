@@ -5,9 +5,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Upstox TOTP Dashboard</title>
 
+<!-- PWA -->
+<link rel="manifest" href="/static/manifest.json">
+<meta name="theme-color" content="#4f46e5">
+<link rel="apple-touch-icon" href="/static/icons/icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Upstox TOTP">
+
 <!-- Bootstrap Icons (CDN, no local files) -->
 <link rel="stylesheet"
-      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.2/font/bootstrap-icons.min.css">
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.2/font/bootstrap-icons.min.css"
+      crossorigin="anonymous">
 
 <link rel="stylesheet" href="/static/style.css" />
 </head>
@@ -24,6 +34,9 @@
           Paste or type your 6-digit TOTP — we'll submit it for you.
         </p>
       </div>
+      <button id="install-btn" class="ghost-btn" type="button" style="display:none;">
+        <i class="bi bi-download" aria-hidden="true"></i> Install app
+      </button>
       <div class="badge {{ 'badge-on' if test_flag else 'badge-off' }}">
         <i class="bi bi-toggle-on" aria-hidden="true"></i>
         TEST_FLAG: {{ 'ON' if test_flag else 'OFF' }}
@@ -86,5 +99,14 @@
   </main>
 
   <script src="/static/app.js"></script>
+
+  <!-- PWA service worker registration -->
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("/static/sw.js").catch(console.error);
+      });
+    }
+  </script>
 </body>
 </html>
